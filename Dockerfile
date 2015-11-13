@@ -1,9 +1,10 @@
-from ubuntu
-run	apt-get update
-run	apt-get install -q -y znc openssl
-add	. /src
-run	cd /src && chmod +x zncrun && cp zncrun /usr/local/bin/
-run	mkdir /.znc && chown irc: /.znc
+from alpine
+RUN apk add --update znc openssl && rm -rf /var/cache/apk/*
 
-expose	6667
+ADD	zncrun /usr/local/bin/
+RUN chmod +x /usr/local/bin/zncrun && mkdir /.znc && chown -R daemon /.znc
+# && mkdir /sbin/.znc/ && chown -R daemon /sbin/.znc/
+
+USER daemon
+EXPOSE 6667
 cmd	["zncrun"]

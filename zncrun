@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 if [ $# -lt 2 ]; then
 	echo "Usage: $0 ZNC_USER ZNC_PASS"
@@ -10,8 +10,8 @@ ZNC_USER=$1
 ZNC_PASS=$2
 
 mkdir -p .znc/configs
-openssl req -subj '/CN=znc.docker/O=ZNC Docker./C=US' -new -newkey rsa:2048 -days 365 -nodes -x509 -keyout server.key -out server.crt
-cat server.key > /.znc/znc.pem && cat server.crt >> /.znc/znc.pem
+openssl req -subj '/CN=znc.docker/O=ZNC Docker./C=US' -new -newkey rsa:2048 -days 365 -nodes -x509 -keyout /.znc/server.key -out /.znc/server.crt
+cat /.znc/server.key > /.znc/znc.pem && cat /.znc/server.crt >> /.znc/znc.pem
 # FIXME: call znc --makepass instead of generating the has manually
 ZNC_SALT="$(dd if=/dev/urandom bs=16c count=1 | md5sum | awk '{print $1}')"
 ZNC_HASH="sha256#$(echo -n ${ZNC_PASS}${ZNC_SALT} | sha256sum | awk '{print $1}')#$ZNC_SALT#"
@@ -40,11 +40,10 @@ LoadModule = lastseen
         LoadModule = admin
         LoadModule = keepnick
         LoadModule = kickrejoin
-        LoadModule = log
         LoadModule = nickserv
         LoadModule = simple_away
 
         Server     = irc.freenode.net 6667
 </User>
 EOF
-exec znc -r -f
+exec znc -r -f -d /.znc
