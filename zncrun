@@ -9,13 +9,20 @@ ZNC_USER=$1
 # FIXME: password will be visible in process list. Read it from stdin?
 ZNC_PASS=$2
 
-mkdir -p .znc/configs
-openssl req -subj '/CN=znc.docker/O=ZNC Docker./C=US' -new -newkey rsa:2048 -days 365 -nodes -x509 -keyout /.znc/server.key -out /.znc/server.crt
-cat /.znc/server.key > /.znc/znc.pem && cat /.znc/server.crt >> /.znc/znc.pem
-# FIXME: call znc --makepass instead of generating the has manually
-ZNC_SALT="$(dd if=/dev/urandom bs=16c count=1 | md5sum | awk '{print $1}')"
-ZNC_HASH="sha256#$(echo -n ${ZNC_PASS}${ZNC_SALT} | sha256sum | awk '{print $1}')#$ZNC_SALT#"
-cat >.znc/configs/znc.conf <<EOF
+if [ ! -f ".znc/configs" ]; then
+  mkdir -p .znc/configs
+fi
+if [ ! -f "/.znc/znc.pem" ]; then
+  echo "znc.pem not found, generating self signed certificate"
+  openssl req -subj '/CN=znc.docker/O=ZNC Docker./C=US' -new -newkey rsa:2048 -days 365 -nodes -x509 -keyout /.znc/server.key -out /.znc/server.crt
+  cat /.znc/server.key > /.znc/znc.pem && cat /.znc/server.crt >> /.znc/znc.pem
+fi
+if [ ! -f ".znc/configs/znc.conf" ]; then
+  echo "No configuration file found, generating default config"
+  # FIXME: call znc --makepass instead of generating the has manually
+  ZNC_SALT="$(dd if=/dev/urandom bs=16c count=1 | md5sum | awk '{print $1}')"
+  ZNC_HASH="sha256#$(echo -n ${ZNC_PASS}${ZNC_SALT} | sha256sum | awk '{print $1}')#$ZNC_SALT#"
+  cat >.znc/configs/znc.conf <<EOF
 
 LoadModule = lastseen
 <Listener l>
@@ -35,7 +42,7 @@ LoadModule = lastseen
         Buffer     = 200
         KeepBuffer = false
         ChanModes  = +stn
-	MaxJoins   = 1
+	      MaxJoins   = 1
 
         LoadModule = admin
         LoadModule = keepnick
@@ -46,4 +53,5 @@ LoadModule = lastseen
         Server     = irc.freenode.net 6667
 </User>
 EOF
+fi
 exec znc -r -f -d /.znc
